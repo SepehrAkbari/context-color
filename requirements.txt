@@ -1,0 +1,8 @@
+kaggle
+torch
+torchvision
+scikit-image
+pillow
+Flask
+numpy
+matplotlib
