@@ -1,2 +1,4 @@
 venv
 data/celeba
+*.pyc
+data/test-faces
