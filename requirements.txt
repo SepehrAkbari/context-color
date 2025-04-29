@@ -6,3 +6,4 @@ pillow
 Flask
 numpy
 matplotlib
+pycocotools
