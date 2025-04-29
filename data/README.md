@@ -9,17 +9,25 @@ The COCO dataset (2017 subset) was used to train a general model, containing abo
 COCO offers a wide range of datasets at [COCO Dataset](https://cocodataset.org/). Their data is available at [COCO Dataset Image](http://images.cocodataset.org/). You can download any of the images, and use them for training. The dataset we used was the 2017 training subset, which you can download by running the following command:
 
 ```bash
+cd data
+mkdir -p coco/images
+cd coco/images
 curl -O http://images.cocodataset.org/zips/train2017.zip
 unzip train2017.zip
 rm train2017.zip
+cd ../../../
 ```
 
 To fetch the annotations, in JSON format, you can run the following command:
 
 ```bash
+cd data
+mkdir - p coco/annotations
+cd coco/annotations
 curl -O http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 unzip annotations_trainval2017.zip
 rm annotations_trainval2017.zip
+cd ../../../
 ```
 
 ### CelebA Dataset
@@ -44,4 +52,5 @@ mkdir -p celeba
 cd celeba
 kaggle datasets download -d jessicali9530/celeba-dataset
 unzip celeba-dataset.zip
+cd ../../../
 ```
