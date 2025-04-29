@@ -1,4 +1,6 @@
 venv
 data/celeba
+data/coco
 *.pyc
 data/test-faces
+data/test-coco
