@@ -41,7 +41,7 @@ if __name__ == '__main__':
     p.add_argument('-m','--model', default=os.path.join(
         os.path.abspath(os.path.join(SRC_ROOT,'..')), 'models','general.pt'
     ))
-    p.add_argument('-s','--size', type=int, default=128)
+    p.add_argument('-s','--size', type=int, default=256)
     args = p.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

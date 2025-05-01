@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 import torchvision.utils as vutils
 
 # ensure you can import from src/
@@ -61,7 +61,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  mode='min',
                                                  factor=0.5,
                                                  patience=PATIENCE_LR)
-scaler    = GradScaler()
+scaler    = GradScaler("cuda")
 
 # ─── Metrics & Viz Utilities ─────────────────────────────────────────────────
 def compute_psnr(pred, target):
@@ -71,7 +71,7 @@ def save_viz(epoch, n=4):
     model.eval()
     L, ab = next(iter(val_loader))
     L, ab = L[:n].to(device), ab[:n].to(device)
-    with torch.no_grad(), autocast():
+    with torch.no_grad(), autocast("cuda"):
         ab_pred = model(L)
     lab_gt   = torch.cat([L, ab], dim=1)
     lab_pred = torch.cat([L, ab_pred], dim=1)
@@ -87,7 +87,7 @@ def train_epoch():
     for L, ab in train_loader:
         L, ab = L.to(device), ab.to(device)
         optimizer.zero_grad()
-        with autocast():
+        with autocast("cuda"):
             ab_pred = model(L)
             loss    = criterion(ab_pred, ab)
         scaler.scale(loss).backward()
@@ -102,7 +102,7 @@ def validate():
     with torch.no_grad():
         for L, ab in val_loader:
             L, ab = L.to(device), ab.to(device)
-            with autocast():
+            with autocast("cuda"):
                 ab_pred = model(L)
                 loss    = criterion(ab_pred, ab)
             running     += loss.item()

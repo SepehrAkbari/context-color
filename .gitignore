@@ -1,6 +1,15 @@
+# environment
 venv
+
+# training visuals
+visuals
+
+# training and testing data
 data/celeba
 data/coco
+data/test-*
+app/static/uploads/*
+
+# cache
 *.pyc
-data/test-faces
-data/test-coco
+__pycache__
