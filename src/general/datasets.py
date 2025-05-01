@@ -9,19 +9,9 @@ from torchvision import transforms
 from pycocotools.coco import COCO
 
 class COCOColorization(Dataset):
-    """
-    Expects:
-      data/coco/images/train2017/   ← all .jpg
-      data/coco/annotations/        ← contains instances_train2017.json
-    """
     def __init__(self, root: str, annFile: str, img_size: int = 128, n_samples: int = 30000):
-        """
-        root:    path to COCO `train2017` images folder
-        annFile: path to `instances_train2017.json` (or captions)
-        """
         self.coco = COCO(annFile)
         self.ids  = list(self.coco.imgs.keys())
-        # sample a subset for faster turnaround
         if n_samples < len(self.ids):
             self.ids = random.sample(self.ids, n_samples)
         self.root      = root
@@ -40,13 +30,11 @@ class COCOColorization(Dataset):
         img    = Image.open(path).convert('RGB')
         img    = self.transform(img)
 
-        # RGB → Lab
         rgb_np  = np.array(img) / 255.0
         lab_np  = color.rgb2lab(rgb_np).astype(np.float32)
-        L_np    = lab_np[:, :, 0:1] / 100.0      # [0,1]
-        ab_np   = lab_np[:, :, 1:]  / 128.0      # approx [-1,1]
+        L_np    = lab_np[:, :, 0:1] / 100.0
+        ab_np   = lab_np[:, :, 1:]  / 128.0
 
-        # to tensor
-        L  = torch.from_numpy(L_np).permute(2,0,1)   # (1,H,W)
-        ab = torch.from_numpy(ab_np).permute(2,0,1)  # (2,H,W)
+        L  = torch.from_numpy(L_np).permute(2,0,1)
+        ab = torch.from_numpy(ab_np).permute(2,0,1)
         return L, ab

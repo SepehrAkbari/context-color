@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import random
@@ -12,15 +11,12 @@ from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 import torchvision.utils as vutils
 
-# make sure we can import from faces/
-# __file__ = .../COLORME/src/faces/train.py
 SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(SRC_ROOT)
 
 from faces.datasets import CelebAColorization
 from faces.model    import ColorNet
 
-# ─── 1) Repro & Performance ──────────────────────────────────────────────────
 seed = 42
 random.seed(seed)
 np.random.seed(seed)
@@ -29,19 +25,17 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.benchmark = True
 
-# ─── 2) Hyperparams ──────────────────────────────────────────────────────────
-BASE_DIR     = os.path.abspath(os.path.join(SRC_ROOT, '..'))    # .../COLORME
+BASE_DIR     = os.path.abspath(os.path.join(SRC_ROOT, '..')) 
 DATA_ROOT    = os.path.join(BASE_DIR, 'data', 'celeba')
 IMG_SIZE     = 128
 BATCH_SIZE   = 32
 NUM_EPOCHS   = 50
 LR           = 1e-4
 WEIGHT_DECAY = 1e-5
-PATIENCE_LR  = 3     # epochs w/o val-improve → halve LR
-PATIENCE_STOP= 7     # epochs w/o val-improve → early stop
-VIZ_EVERY    = 5     # save visuals every N epochs
+PATIENCE_LR  = 3 
+PATIENCE_STOP= 7 
+VIZ_EVERY    = 5 
 
-# ─── 3) Device & Dataloaders ─────────────────────────────────────────────────
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 train_ds = CelebAColorization(DATA_ROOT, split='train', img_size=IMG_SIZE)
@@ -52,7 +46,6 @@ train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
 val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False,
                           num_workers=4, pin_memory=True)
 
-# ─── 4) Model, Opt, Loss, Sched, AMP ──────────────────────────────────────────
 model     = ColorNet().to(device)
 optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 criterion = nn.L1Loss()
@@ -62,7 +55,6 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=PATIENCE_LR)
 scaler    = GradScaler()
 
-# ─── 5) Metrics & Viz Utils ──────────────────────────────────────────────────
 def compute_psnr(pred, target):
     mse = torch.mean((pred - target) ** 2)
     return 10 * log10(1 / mse.item())
@@ -91,7 +83,6 @@ def save_viz(epoch, n=4):
     os.makedirs(os.path.join(BASE_DIR, 'visuals'), exist_ok=True)
     vutils.save_image(grid, os.path.join(BASE_DIR, f'visuals/viz_epoch{epoch:02d}.png'))
 
-# ─── 6) Train & Val ───────────────────────────────────────────────────────────
 def train_epoch(epoch):
     model.train()
     total_loss = 0.0
@@ -126,35 +117,31 @@ def validate(epoch):
     print(f"Epoch {epoch:02d} — Val Loss: {avg_loss:.4f}, PSNR_ab: {avg_psnr:.2f} dB")
     return avg_loss
 
-# ─── 7) Main Loop ─────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    print("Starting training on device:", device)
+    print("device:", device)
     best_loss, no_improve = float('inf'), 0
 
     for epoch in range(1, NUM_EPOCHS+1):
         _         = train_epoch(epoch)
         val_loss  = validate(epoch)
 
-        # LR scheduling
         old_lr = optimizer.param_groups[0]['lr']
         scheduler.step(val_loss)
         new_lr = optimizer.param_groups[0]['lr']
         if new_lr != old_lr:
-            print(f"  ↳ LR reduced {old_lr:.2e} → {new_lr:.2e}")
+            print(f"LR reduced {old_lr:.2e} to {new_lr:.2e}")
 
-        # checkpoint & early stop
         if val_loss < best_loss:
             best_loss, no_improve = val_loss, 0
             torch.save(model.state_dict(),
                        os.path.join(BASE_DIR, 'models', 'best_model.pt'))
-            print("  ↳ Saved new best model.")
+            print("Saved new best model.")
         else:
             no_improve += 1
             if no_improve >= PATIENCE_STOP:
-                print(f"No improvement for {PATIENCE_STOP} epochs → stopping.")
+                print(f"No improvement for {PATIENCE_STOP} epochs -- stopping.")
                 break
 
-        # visual checkpoint
         if epoch % VIZ_EVERY == 0:
             save_viz(epoch)
 

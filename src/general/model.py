@@ -25,21 +25,19 @@ class UpBlock(nn.Module):
 class ColorNet(nn.Module):
     def __init__(self):
         super().__init__()
-        # Encoder: downsample L-channel
         self.encoder = nn.Sequential(
             ConvBlock(1, 64, kernel=5, stride=2, padding=2),
             ConvBlock(64, 128, stride=2),
             ConvBlock(128, 256, stride=2),
             ConvBlock(256, 512, stride=2),
         )
-        # Decoder: upsample back to original size
         self.decoder = nn.Sequential(
             UpBlock(512, 256),
             UpBlock(256, 128),
             UpBlock(128, 64),
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(64, 2, kernel_size=3, padding=1),
-            nn.Tanh(),  # output in [-1,1]
+            nn.Tanh(),
         )
 
     def forward(self, L):

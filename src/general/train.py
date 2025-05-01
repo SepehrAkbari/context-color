@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import random
@@ -12,14 +11,12 @@ from torch.utils.data import DataLoader
 from torch.amp import GradScaler, autocast
 import torchvision.utils as vutils
 
-# ensure you can import from src/
 SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(SRC_ROOT)
 
 from general.datasets import COCOColorization
 from general.model    import ColorNet
 
-# ─── Repro & Perf ───────────────────────────────────────────────────────────
 seed = 42
 random.seed(seed)
 np.random.seed(seed)
@@ -28,8 +25,7 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.benchmark = True
 
-# ─── Hyperparams & Paths ─────────────────────────────────────────────────────
-BASE_DIR     = os.path.abspath(os.path.join(SRC_ROOT, '..'))  # project root
+BASE_DIR     = os.path.abspath(os.path.join(SRC_ROOT, '..'))
 COCO_IMG_DIR = os.path.join(BASE_DIR, 'data', 'coco', 'images', 'train2017')
 COCO_ANN     = os.path.join(BASE_DIR, 'data', 'coco', 'annotations', 'instances_train2017.json')
 MODEL_OUT    = os.path.join(BASE_DIR, 'models', 'general.pt')
@@ -43,7 +39,6 @@ PATIENCE_LR  = 3
 PATIENCE_STOP= 7
 VIZ_EVERY    = 5
 
-# ─── Data & Device ────────────────────────────────────────────────────────────
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_ds = COCOColorization(COCO_IMG_DIR, COCO_ANN, img_size=IMG_SIZE, n_samples=30000)
 val_ds   = COCOColorization(COCO_IMG_DIR, COCO_ANN, img_size=IMG_SIZE, n_samples=5000)
@@ -53,7 +48,6 @@ train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
 val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False,
                           num_workers=4, pin_memory=True)
 
-# ─── Model, Opt, Loss, Sched, AMP ─────────────────────────────────────────────
 model     = ColorNet().to(device)
 optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 criterion = nn.L1Loss()
@@ -63,7 +57,6 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                  patience=PATIENCE_LR)
 scaler    = GradScaler("cuda")
 
-# ─── Metrics & Viz Utilities ─────────────────────────────────────────────────
 def compute_psnr(pred, target):
     return 10 * log10(1.0 / torch.mean((pred - target) ** 2).item())
 
@@ -75,12 +68,10 @@ def save_viz(epoch, n=4):
         ab_pred = model(L)
     lab_gt   = torch.cat([L, ab], dim=1)
     lab_pred = torch.cat([L, ab_pred], dim=1)
-    # reuse the same lab→rgb helper from faces save if you want...
     grid = vutils.make_grid(torch.cat([lab_pred, lab_gt], dim=0), nrow=n)
     os.makedirs(os.path.join(BASE_DIR, 'visuals'), exist_ok=True)
     vutils.save_image(grid, os.path.join(BASE_DIR, f'visuals/gen_viz{epoch:02d}.png'))
 
-# ─── Train & Validate ─────────────────────────────────────────────────────────
 def train_epoch():
     model.train()
     running = 0
@@ -109,21 +100,18 @@ def validate():
             psnr_total  += compute_psnr(ab_pred, ab)
     return running / len(val_loader), psnr_total / len(val_loader)
 
-# ─── Main Loop ─────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     best, no_improve = float('inf'), 0
-    print("Training general model on COCO...")
     for epoch in range(1, NUM_EPOCHS + 1):
         tr_loss = train_epoch()
         val_loss, val_psnr = validate()
-        print(f"E{epoch:02d} — Train: {tr_loss:.4f} | Val: {val_loss:.4f}, PSNR: {val_psnr:.2f} dB")
+        print(f"Epoch {epoch:02d} — Train: {tr_loss:.4f} | Val: {val_loss:.4f}, PSNR: {val_psnr:.2f} dB")
         scheduler.step(val_loss)
 
-        # checkpoint?
         if val_loss < best:
             best, no_improve = val_loss, 0
             torch.save(model.state_dict(), MODEL_OUT)
-            print("  ↳ Saved general.pt")
+            print("Saved general.pt")
         else:
             no_improve += 1
             if no_improve >= PATIENCE_STOP:
