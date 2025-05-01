@@ -6,9 +6,19 @@ Inspired by the approach in [*Colorful Image Colorization* (Zhang et al.)](https
 
 ## App Demo
 
+Example of general colorization:
+
+![general](app/demo/demo-general.jpeg)
+
+Example of specific portrait colorization:
+
+![portrait](app/demo/demo-faces.jpeg)
+
 ## Data
 
-The dataset used in this project is sourced from 17000 blood cell images, using the analyzer CellaVision DM96 in the Core Laboratory at the Hospital Clinic of Barcelona. The dataset is available in the `Data` folder and can also be downloaded from [Kaggle](https://www.kaggle.com/datasets/unclesamulus/blood-cells-image-dataset).
+This project uses two datasets to train separate models: one general-purpose model trained on the [COCO dataset](https://cocodataset.org/), and a face-specialized model trained on the [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html). COCO provides diverse everyday scenes, while CelebA contains over 200,000 celebrity face images ideal for facial feature learning.
+
+For detailed download instructions, see [data](data/README.md).
 
 ## Usage
 
