@@ -31,24 +31,43 @@ def preprocess(img_path, size):
     L   = lab[:,:,0] / 100.0
     return img, torch.from_numpy(L).unsqueeze(0).unsqueeze(0)
 
-def inpaint_ab(ab_pred, device, threshold=1e-3, radius=3, iterations=2):
-    ab_np = ab_pred.squeeze(0).permute(1,2,0).cpu().numpy()
-    H, W, _ = ab_np.shape
+import numpy as np
+import torch
+import cv2
 
-    mask = (np.linalg.norm(ab_np, axis=2) < threshold).astype('uint8') * 255
+def inpaint_ab(ab_pred, device,
+               threshold=1e-3,
+               radius=3,
+               iterations=2,
+               return_pct=False):
+    # 1) Move to CPU numpy, shape (H,W,2)
+    ab_np_before = ab_pred.squeeze(0).permute(1,2,0).cpu().numpy()
+    filled = ab_np_before.copy()
 
-    filled = ab_np.copy()
+    # 2) Iterative inpainting on near-zero regions
     for _ in range(iterations):
+        # build 8-bit mask for OpenCV: holes where color magnitude < small eps
+        mask = (np.linalg.norm(filled, axis=2) < threshold).astype('uint8') * 255
         if not mask.any():
             break
         for c in range(2):
-            chan = ((filled[:,:,c] + 1) * 127.5).astype('uint8')
-            filled_chan = cv2.inpaint(chan, mask, inpaintRadius=radius, flags=cv2.INPAINT_TELEA)
-            filled[:,:,c] = filled_chan.astype('float32') / 127.5 - 1.0
-        mask = (np.linalg.norm(filled, axis=2) < threshold).astype('uint8') * 255
+            chan = ((filled[:,:,c] + 1.0) * 127.5).astype('uint8')
+            inp  = cv2.inpaint(chan, mask,
+                               inpaintRadius=radius,
+                               flags=cv2.INPAINT_TELEA)
+            filled[:,:,c] = inp.astype('float32') / 127.5 - 1.0
 
+    # 3) Back to torch on device
     ab_filled = torch.from_numpy(filled).permute(2,0,1).unsqueeze(0).to(device)
+
+    if return_pct:
+        # compute how many pixels actually changed
+        delta = np.linalg.norm(filled - ab_np_before, axis=2)
+        pct_changed = 100.0 * (np.count_nonzero(delta > threshold) / delta.size)
+        return ab_filled, pct_changed
+
     return ab_filled
+
 
 def postprocess(L, ab):
     lab = torch.cat([L, ab], dim=1)[0].permute(1,2,0).cpu().numpy()
