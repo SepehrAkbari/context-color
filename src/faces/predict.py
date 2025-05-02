@@ -35,18 +35,11 @@ import numpy as np
 import torch
 import cv2
 
-def inpaint_ab(ab_pred, device,
-               threshold=1e-3,
-               radius=3,
-               iterations=2,
-               return_pct=False):
-    # 1) Move to CPU numpy, shape (H,W,2)
+def inpaint_ab(ab_pred, device, threshold=1e-3, radius=3, iterations=2, return_pct=False):
     ab_np_before = ab_pred.squeeze(0).permute(1,2,0).cpu().numpy()
     filled = ab_np_before.copy()
 
-    # 2) Iterative inpainting on near-zero regions
     for _ in range(iterations):
-        # build 8-bit mask for OpenCV: holes where color magnitude < small eps
         mask = (np.linalg.norm(filled, axis=2) < threshold).astype('uint8') * 255
         if not mask.any():
             break
@@ -57,11 +50,9 @@ def inpaint_ab(ab_pred, device,
                                flags=cv2.INPAINT_TELEA)
             filled[:,:,c] = inp.astype('float32') / 127.5 - 1.0
 
-    # 3) Back to torch on device
     ab_filled = torch.from_numpy(filled).permute(2,0,1).unsqueeze(0).to(device)
 
     if return_pct:
-        # compute how many pixels actually changed
         delta = np.linalg.norm(filled - ab_np_before, axis=2)
         pct_changed = 100.0 * (np.count_nonzero(delta > threshold) / delta.size)
         return ab_filled, pct_changed
@@ -100,7 +91,6 @@ def main():
     with torch.no_grad():
         ab_pred = model(L)
 
-    # inpaint any zero-color holes
     ab = inpaint_ab(ab_pred, device)
 
     out = postprocess(L, ab)
