@@ -58,14 +58,6 @@ cd ../faces
 python train.py
 ```
 
-To explore the analysis, run the Jupyter Notebook located in the `Notebook` folder:
-
-```bash
-jupyter notebook notebooks/context-color.ipynb
-```
-
-## Approach
-
 ## Approach
 
 - **Data Preparation**  
